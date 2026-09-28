@@ -4,7 +4,15 @@
 \alias{adorn_totals}
 \title{Append a totals row and/or column to a data.frame}
 \usage{
-adorn_totals(dat, where = "row", fill = "-", na.rm = TRUE, name = "Total", ...)
+adorn_totals(
+  dat,
+  where = "row",
+  fill = "-",
+  na.rm = TRUE,
+  name = "Total",
+  ...,
+  cols = NULL
+)
 }
 \arguments{
 \item{dat}{An input \code{data.frame} with at least one numeric column. If given a
@@ -25,10 +33,15 @@ and \code{name} is a vector of length 2, the first element of the vector will be
 used as the row name (in column 1), and the second element will be used as the
 totals column name. Defaults to "Total".}
 
-\item{...}{Columns to total.  This takes a tidyselect specification. By default,
+\item{...}{Columns to total (legacy interface).  This takes a tidyselect specification. By default,
 all numeric columns (besides the initial column, if numeric) are included in
 the totals, but this allows you to manually specify which columns should be
 included, for use on a data.frame that does not result from a call to \code{tabyl}.}
+
+\item{cols}{Columns to total. This takes a tidyselect specification (e.g.,
+\code{cols = Sepal.Width:Petal.Width} or \code{cols = any_of(c("Sepal.Length", "Sepal.Width"))}).
+This is the recommended way to select columns to total without needing to supply
+unneeded positional arguments.}
 }
 \value{
 A \code{data.frame} augmented with a totals row, column, or both.

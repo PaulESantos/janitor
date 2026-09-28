@@ -19,7 +19,11 @@
 #'   and `name` is a vector of length 2, the first element of the vector will be
 #'   used as the row name (in column 1), and the second element will be used as the
 #'   totals column name. Defaults to "Total".
-#' @param ... Columns to total.  This takes a tidyselect specification. By default,
+#' @param cols Columns to total. This takes a tidyselect specification (e.g.,
+#'   `cols = Sepal.Width:Petal.Width` or `cols = any_of(c("Sepal.Length", "Sepal.Width"))`).
+#'   This is the recommended way to select columns to total without needing to supply
+#'   unneeded positional arguments.
+#' @param ... Columns to total (legacy interface).  This takes a tidyselect specification. By default,
 #'   all numeric columns (besides the initial column, if numeric) are included in
 #'    the totals, but this allows you to manually specify which columns should be
 #'     included, for use on a data.frame that does not result from a call to `tabyl`.
@@ -31,13 +35,23 @@
 #' mtcars %>%
 #'   tabyl(am, cyl) %>%
 #'   adorn_totals()
-adorn_totals <- function(dat, where = "row", fill = "-", na.rm = TRUE, name = "Total", ...) {
+adorn_totals <- function(dat, where = "row", fill = "-", na.rm = TRUE, name = "Total", ..., cols = NULL) {
   if ("both" %in% where) {
     where <- c("row", "col")
   }
+
+  cols_enquo <- rlang::enquo(cols)
+  has_cols <- !rlang::quo_is_null(cols_enquo)
+
   # if input is a list, call purrr::map to recursively apply this function to each data.frame
   if (is.list(dat) && !is.data.frame(dat)) {
-    purrr::map(dat, adorn_totals, where, fill, na.rm, name)
+    if (has_cols) {
+      purrr::map(dat, function(x) {
+        adorn_totals(x, where = where, fill = fill, na.rm = na.rm, name = name, cols = !!cols_enquo)
+      })
+    } else {
+      purrr::map(dat, adorn_totals, where, fill, na.rm, name, ...)
+    }
   } else {
     if (!is.data.frame(dat)) {
       stop("adorn_totals() must be called on a data.frame or list of data.frames")
@@ -46,17 +60,34 @@ adorn_totals <- function(dat, where = "row", fill = "-", na.rm = TRUE, name = "T
     numeric_cols <- which(vapply(dat, is.numeric, logical(1)))
     non_numeric_cols <- setdiff(1:ncol(dat), numeric_cols)
 
-    if (rlang::dots_n(...) == 0) {
-      # by default 1st column is not totaled so remove it from numeric_cols and add to non_numeric_cols
-      numeric_cols <- setdiff(numeric_cols, 1)
-      non_numeric_cols <- unique(c(1, non_numeric_cols))
-      cols_to_total <- numeric_cols
-    } else {
+    has_dots <- rlang::dots_n(...) > 0
+
+    if (has_cols && has_dots) {
+      stop("Specify columns to total using either 'cols' or '...', not both.")
+    } else if (has_cols) {
+      cols_to_total <- tidyselect::eval_select(cols_enquo, data = dat)
+      if (any(cols_to_total %in% non_numeric_cols)) {
+        cols_to_total <- setdiff(cols_to_total, non_numeric_cols)
+      }
+    } else if (has_dots) {
       expr <- rlang::expr(c(...))
       cols_to_total <- tidyselect::eval_select(expr, data = dat)
       if (any(cols_to_total %in% non_numeric_cols)) {
         cols_to_total <- setdiff(cols_to_total, non_numeric_cols)
       }
+    } else if (is.numeric(where)) {
+      cols_to_total <- intersect(as.integer(where), numeric_cols)
+      where <- "row"
+      warning("Columns were passed to the 'where' argument. Defaulting 'where = \"row\"' and using these columns for totals. In the future, please use 'cols = ...' instead.", call. = FALSE)
+    } else if (is.character(where) && !all(where %in% c("row", "col", "both")) && all(where %in% names(dat))) {
+      cols_to_total <- intersect(match(where, names(dat)), numeric_cols)
+      where <- "row"
+      warning("Column names were passed to the 'where' argument. Defaulting 'where = \"row\"' and using these columns for totals. In the future, please use 'cols = ...' instead.", call. = FALSE)
+    } else {
+      # by default 1st column is not totaled so remove it from numeric_cols and add to non_numeric_cols
+      numeric_cols <- setdiff(numeric_cols, 1)
+      non_numeric_cols <- unique(c(1, non_numeric_cols))
+      cols_to_total <- numeric_cols
     }
 
     if (length(cols_to_total) == 0) {

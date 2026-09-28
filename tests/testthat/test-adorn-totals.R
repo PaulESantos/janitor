@@ -339,6 +339,38 @@ test_that("tidyselecting works", {
       adorn_totals() %>%
       as.data.frame()
   )
+  # test that cols argument works identically to legacy dots without empty commas
+  expect_equal(
+    simple %>%
+      adorn_totals(cols = y) %>%
+      as.data.frame(),
+    simple %>%
+      adorn_totals(, , , , y) %>%
+      as.data.frame()
+  )
+
+  # test tidyselect helpers with cols
+  expect_equal(
+    simple %>%
+      adorn_totals(cols = tidyselect::any_of("y")) %>%
+      as.data.frame(),
+    simple %>%
+      adorn_totals(cols = y) %>%
+      as.data.frame()
+  )
+
+  # error when both cols and dots are specified
+  expect_error(
+    simple %>% adorn_totals(, , , , y, cols = y),
+    "Specify columns to total using either 'cols' or '...', not both."
+  )
+
+  # fallback with warning when numeric is passed to where
+  expect_warning(
+    numeric_where <- simple %>% adorn_totals(2),
+    "Columns were passed to the 'where' argument. Defaulting 'where = \"row\"'"
+  )
+  expect_equal(numeric_where, simple %>% adorn_totals(cols = y))
 })
 
 test_that("supplying NA to fill preserves column types", {
