@@ -27,3 +27,4 @@ Index.Rmd
 ^\.github$
 revdep/
 ^CRAN-SUBMISSION$
+^DOCS_TRAZABILIDAD_CAMBIOS\.md$
