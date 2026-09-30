@@ -11,7 +11,8 @@ adorn_ns(
   format_func = function(x) {
      format(x, big.mark = ",")
  },
-  ...
+  ...,
+  cols = NULL
 )
 }
 \arguments{
@@ -29,10 +30,14 @@ with \code{format_func}, you can supply them here.}
 \item{format_func}{A formatting function to run on the Ns. Consider defining
 with \code{\link[base:format]{base::format()}}.}
 
-\item{...}{Columns to adorn. This takes a tidyselect specification.  By default,
+\item{...}{Legacy columns-to-adorn tidyselect specification. Supply either
+\code{cols} or \code{...}, not both. By default,
 all columns are adorned except for the first column and columns not of class
 \code{numeric}, but this allows you to manually specify which columns should be adorned,
 for use on a data.frame that does not result from a call to \code{tabyl}.}
+
+\item{cols}{Columns to adorn. This takes a tidyselect specification and is
+the recommended interface for selecting columns.}
 }
 \value{
 A \code{data.frame} with Ns appended
@@ -63,9 +68,7 @@ bigger_dat \%>\%
   adorn_percentages("col") \%>\%
   adorn_pct_formatting(digits = 1) \%>\%
   adorn_ns(format_func = function(x) format(x, big.mark = ".", decimal.mark = ","))
-# Control the columns to be adorned with the ... variable selection argument
-# If using only the ... argument, you can use empty commas as shorthand
-# to supply the default values to the preceding arguments:
+# Select columns without positional placeholder commas:
 
 cases <- data.frame(
   region = c("East", "West"),
@@ -75,8 +78,8 @@ cases <- data.frame(
 )
 
 cases \%>\%
- adorn_percentages("col",,recovered:died) \%>\%
- adorn_pct_formatting(,,,,,recovered:died) \%>\%
- adorn_ns(,,,recovered:died)
+ adorn_percentages(denominator = "col", cols = recovered:died) \%>\%
+ adorn_pct_formatting(cols = recovered:died) \%>\%
+ adorn_ns(cols = recovered:died)
 
 }

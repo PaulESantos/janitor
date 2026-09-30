@@ -143,6 +143,11 @@ test_that("automatically invokes purrr::map when called on a 3-way tabyl", {
     adorn_pct_formatting(three, 2, "half up", affix_sign = FALSE),
     purrr::map(three, adorn_pct_formatting, 2, "half up", FALSE)
   )
+
+  expect_equal(
+    adorn_pct_formatting(three, , , , `0`),
+    purrr::map(three, ~ adorn_pct_formatting(.x, , , , `0`))
+  )
 })
 
 test_that("non-data.frame inputs are handled", {

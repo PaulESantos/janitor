@@ -147,6 +147,12 @@ test_that("automatically invokes purrr::map when called on a 3-way tabyl", {
     adorn_ns(three, "front"),
     purrr::map(three, adorn_ns, "front")
   )
+
+  format_ns <- function(x) paste0("N=", x)
+  expect_equal(
+    adorn_ns(three, format_func = format_ns),
+    purrr::map(three, adorn_ns, format_func = format_ns)
+  )
 })
 
 test_that("non-data.frame inputs are handled", {

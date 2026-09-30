@@ -5,7 +5,7 @@
 #' percentages according to user specifications. This function defaults to
 #' excluding the first column of the input data.frame, assuming that it contains
 #' a descriptive variable, but this can be overridden by specifying the columns
-#' to adorn in the `...` argument.  Non-numeric columns are always excluded.
+#' to adorn in the `cols` argument. Non-numeric columns are always excluded.
 #'
 #' The decimal separator character is the result of `getOption("OutDec")`, which
 #' is based on the user's locale. If the default behavior is undesirable,
@@ -21,7 +21,10 @@
 #' @param rounding method to use for rounding - either "half to even", the base
 #'   R default method, or "half up", where 14.5 rounds up to 15.
 #' @param affix_sign should the % sign be affixed to the end?
-#' @param ... columns to adorn. This takes a tidyselect specification.  By
+#' @param cols Columns to adorn. This takes a tidyselect specification and is
+#'   the recommended interface for selecting columns.
+#' @param ... Legacy columns-to-adorn tidyselect specification. Supply either
+#'   `cols` or `...`, not both. By
 #'   default, all numeric columns (besides the initial column, if numeric) are
 #'   adorned, but this allows you to manually specify which columns should be
 #'   adorned, for use on a data.frame that does not result from a call to
@@ -34,9 +37,7 @@
 #'   adorn_percentages("col") %>%
 #'   adorn_pct_formatting()
 #'
-#' # Control the columns to be adorned with the ... variable selection argument
-#' # If using only the ... argument, you can use empty commas as shorthand
-#' # to supply the default values to the preceding arguments:
+#' # Select columns without positional placeholder commas:
 #'
 #' cases <- data.frame(
 #'   region = c("East", "West"),
@@ -46,13 +47,25 @@
 #' )
 #'
 #' cases %>%
-#'   adorn_percentages("col", , recovered:died) %>%
-#'   adorn_pct_formatting(, , , recovered:died)
+#'   adorn_percentages(denominator = "col", cols = recovered:died) %>%
+#'   adorn_pct_formatting(cols = recovered:died)
 #'
-adorn_pct_formatting <- function(dat, digits = 1, rounding = "half to even", affix_sign = TRUE, ...) {
+adorn_pct_formatting <- function(dat, digits = 1, rounding = "half to even", affix_sign = TRUE, ..., cols = NULL) {
+  cols_enquo <- rlang::enquo(cols)
+  has_cols <- !rlang::quo_is_null(cols_enquo)
+  has_dots <- rlang::dots_n(...) > 0
+  if (has_cols && has_dots) {
+    stop("Specify columns to adorn using either 'cols' or '...', not both.")
+  }
   # if input is a list, call purrr::map to recursively apply this function to each data.frame
   if (is.list(dat) && !is.data.frame(dat)) {
-    purrr::map(dat, adorn_pct_formatting, digits, rounding, affix_sign)
+    if (has_cols) {
+      purrr::map(dat, function(x) {
+        adorn_pct_formatting(x, digits = digits, rounding = rounding, affix_sign = affix_sign, cols = !!cols_enquo)
+      })
+    } else {
+      purrr::map(dat, adorn_pct_formatting, digits, rounding, affix_sign, ...)
+    }
   } else {
     # catch bad inputs
     if (!is.data.frame(dat)) {
@@ -66,7 +79,12 @@ adorn_pct_formatting <- function(dat, digits = 1, rounding = "half to even", aff
     non_numeric_cols <- setdiff(1:ncol(dat), numeric_cols)
     numeric_cols <- setdiff(numeric_cols, 1) # assume 1st column should not be included so remove it from numeric_cols. Moved up to this line so that if only 1st col is numeric, the function errors
 
-    if (rlang::dots_n(...) == 0) {
+    if (has_cols) {
+      cols_to_adorn <- tidyselect::eval_select(cols_enquo, data = dat)
+      if (any(cols_to_adorn %in% non_numeric_cols)) {
+        cols_to_adorn <- setdiff(cols_to_adorn, non_numeric_cols)
+      }
+    } else if (!has_dots) {
       cols_to_adorn <- numeric_cols
     } else {
       expr <- rlang::expr(c(...))
@@ -87,7 +105,11 @@ adorn_pct_formatting <- function(dat, digits = 1, rounding = "half to even", aff
     }
 
     dat[cols_to_adorn] <- lapply(dat[cols_to_adorn], function(x) x * 100)
-    dat <- adorn_rounding(dat, digits = digits, rounding = rounding, ...)
+    if (has_cols) {
+      dat <- adorn_rounding(dat, digits = digits, rounding = rounding, cols = !!cols_enquo)
+    } else {
+      dat <- adorn_rounding(dat, digits = digits, rounding = rounding, ...)
+    }
     dat[cols_to_adorn] <- lapply(dat[cols_to_adorn], function(x) {
       format(x,
         nsmall = digits,

@@ -2,6 +2,7 @@ test_that("Serial number dates convert correctly", {
   expect_equal(excel_numeric_to_date(42370), as.Date("2016-01-01"))
   expect_equal(excel_numeric_to_date(42370, "modern"), as.Date("2016-01-01"))
   expect_equal(excel_numeric_to_date(40908, "mac pre-2011"), as.Date("2016-01-01"))
+  expect_equal(excel_numeric_to_date(60, "mac pre-2011"), as.Date("1904-03-01"))
 })
 
 test_that("Bad inputs handled appropriately", {

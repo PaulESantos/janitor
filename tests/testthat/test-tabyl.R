@@ -118,6 +118,13 @@ test_that("failure occurs when passed unsupported types", {
   expect_error(tabyl(complex(10)), "input must be a vector of type logical, numeric, character, list, or factor")
 })
 
+test_that("logical tabyl options must be non-missing scalar values", {
+  expect_error(tabyl(mtcars$cyl, show_na = NA), "show_na")
+  expect_error(tabyl(mtcars, cyl, show_na = NA), "show_na")
+  expect_error(tabyl(mtcars$cyl, show_missing_levels = NA), "show_missing_levels")
+  expect_error(tabyl(mtcars, cyl, show_missing_levels = NA), "show_missing_levels")
+})
+
 test_that("bad input variable name is preserved", {
   expect_equal(
     mtcars %>% dplyr::mutate(`bad name` = cyl) %>% tabyl(`bad name`) %>% names() %>% .[[1]],

@@ -115,7 +115,8 @@ clean_names.sf <- function(dat, ..., set_labels = FALSE) {
   
   if(set_labels){
     for (i in seq_along(sf_names[cols_to_rename])){
-      attr(dat[[i]], "label") <- sf_names[[i]]
+      column_index <- cols_to_rename[[i]]
+      attr(dat[[column_index]], "label") <- sf_names[[column_index]]
     }
   }
 

@@ -83,11 +83,14 @@ tabyl.default <- function(dat, show_na = TRUE, show_missing_levels = TRUE, ...) 
   }
 
   # if show_na is not length-1 logical, error helpfully (#377)
-  if (length(show_na) > 1 || !inherits(show_na, "logical")) {
+  if (length(show_na) != 1 || !inherits(show_na, "logical") || is.na(show_na)) {
     stop("The value supplied to the \"show_na\" argument must be TRUE or FALSE.\n\nDid you try to call tabyl on two vectors, like tabyl(data$var1, data$var2) ? To create a two-way tabyl, the two vectors must be in the same data.frame, and the function should be called like this: \n
          tabyl(data, var1, var2)
          or
          data %>% tabyl(var1, var2).  \n\nSee ?tabyl for more.")
+  }
+  if (length(show_missing_levels) != 1 || !inherits(show_missing_levels, "logical") || is.na(show_missing_levels)) {
+    stop("The value supplied to the \"show_missing_levels\" argument must be TRUE or FALSE.")
   }
 
   # calculate initial counts table
@@ -157,6 +160,12 @@ tabyl.default <- function(dat, show_na = TRUE, show_missing_levels = TRUE, ...) 
 tabyl.data.frame <- function(dat, var1, var2, var3, show_na = TRUE, show_missing_levels = TRUE, ...) {
   if (missing(var1) && missing(var2) && missing(var3)) {
     stop("if calling on a data.frame, specify unquoted column names(s) to tabulate.  Did you mean to call tabyl() on a vector?")
+  }
+  if (length(show_na) != 1 || !inherits(show_na, "logical") || is.na(show_na)) {
+    stop("The value supplied to the \"show_na\" argument must be TRUE or FALSE.")
+  }
+  if (length(show_missing_levels) != 1 || !inherits(show_missing_levels, "logical") || is.na(show_missing_levels)) {
+    stop("The value supplied to the \"show_missing_levels\" argument must be TRUE or FALSE.")
   }
   if (dplyr::is_grouped_df(dat)) {
     dat <- dplyr::ungroup(dat)

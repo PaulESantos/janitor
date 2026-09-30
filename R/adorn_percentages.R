@@ -2,7 +2,7 @@
 #'
 #' This function defaults to excluding the first column of the input data.frame,
 #' assuming that it contains a descriptive variable, but this can be overridden
-#' by specifying the columns to adorn in the `...` argument.
+#' by specifying the columns to adorn in the `cols` argument.
 #'
 #' @param dat A `tabyl` or other data.frame with a tabyl-like layout.
 #'   If given a list of data.frames, this function will apply itself to each
@@ -10,7 +10,10 @@
 #' @param denominator The direction to use for calculating percentages.
 #'   One of "row", "col", or "all".
 #' @param na.rm should missing values (including `NaN`) be omitted from the calculations?
-#' @param ... columns to adorn. This takes a <[`tidy-select`][dplyr::dplyr_tidy_select]>
+#' @param cols Columns to adorn. This takes a <[`tidy-select`][dplyr::dplyr_tidy_select]>
+#'   specification and is the recommended interface for selecting columns.
+#' @param ... Legacy columns-to-adorn tidyselect specification. Supply either
+#'   `cols` or `...`, not both.
 #'   specification. By default, all numeric columns (besides the initial column, if numeric)
 #'   are adorned, but this allows you to manually specify which columns should
 #'   be adorned, for use on a `data.frame` that does not result from a call to [tabyl()].
@@ -29,9 +32,7 @@
 #'   adorn_totals("row") %>%
 #'   adorn_percentages()
 #'
-#' # Control the columns to be adorned with the ... variable selection argument
-#' # If using only the ... argument, you can use empty commas as shorthand
-#' # to supply the default values to the preceding arguments:
+#' # Select columns without positional placeholder commas:
 #'
 #' cases <- data.frame(
 #'   region = c("East", "West"),
@@ -41,11 +42,23 @@
 #' )
 #'
 #' cases %>%
-#'   adorn_percentages(, , recovered:died)
-adorn_percentages <- function(dat, denominator = "row", na.rm = TRUE, ...) {
+#'   adorn_percentages(denominator = "col", cols = recovered:died)
+adorn_percentages <- function(dat, denominator = "row", na.rm = TRUE, ..., cols = NULL) {
+  cols_enquo <- rlang::enquo(cols)
+  has_cols <- !rlang::quo_is_null(cols_enquo)
+  has_dots <- rlang::dots_n(...) > 0
+  if (has_cols && has_dots) {
+    stop("Specify columns to adorn using either 'cols' or '...', not both.")
+  }
   # if input is a list, call purrr::map to recursively apply this function to each data.frame
   if (is.list(dat) && !is.data.frame(dat)) {
-    purrr::map(dat, adorn_percentages, denominator, na.rm, ...)
+    if (has_cols) {
+      purrr::map(dat, function(x) {
+        adorn_percentages(x, denominator = denominator, na.rm = na.rm, cols = !!cols_enquo)
+      })
+    } else {
+      purrr::map(dat, adorn_percentages, denominator, na.rm, ...)
+    }
   } else {
     # catch bad inputs
     if (!is.data.frame(dat)) {
@@ -60,7 +73,14 @@ adorn_percentages <- function(dat, denominator = "row", na.rm = TRUE, ...) {
     numeric_cols <- setdiff(numeric_cols, 1) # assume 1st column should not be included so remove it from numeric_cols. Moved up to this line so that if only 1st col is numeric, the function errors
     explicitly_exempt_totals <- FALSE
 
-    if (rlang::dots_n(...) == 0) {
+    if (has_cols) {
+      cols_to_tally <- tidyselect::eval_select(cols_enquo, data = dat)
+      explicitly_exempt_totals <- !(ncol(dat) %in% cols_to_tally)
+      if (any(cols_to_tally %in% non_numeric_cols)) {
+        message("At least one non-numeric column was specified.  All non-numeric columns will be removed from percentage calculations.")
+        cols_to_tally <- setdiff(cols_to_tally, non_numeric_cols)
+      }
+    } else if (!has_dots) {
       cols_to_tally <- numeric_cols
     } else {
       expr <- rlang::expr(c(...))

@@ -9,7 +9,8 @@ adorn_pct_formatting(
   digits = 1,
   rounding = "half to even",
   affix_sign = TRUE,
-  ...
+  ...,
+  cols = NULL
 )
 }
 \arguments{
@@ -25,11 +26,15 @@ R default method, or "half up", where 14.5 rounds up to 15.}
 
 \item{affix_sign}{should the \% sign be affixed to the end?}
 
-\item{...}{columns to adorn. This takes a tidyselect specification.  By
+\item{...}{Legacy columns-to-adorn tidyselect specification. Supply either
+\code{cols} or \code{...}, not both. By
 default, all numeric columns (besides the initial column, if numeric) are
 adorned, but this allows you to manually specify which columns should be
 adorned, for use on a data.frame that does not result from a call to
 \code{tabyl}.}
+
+\item{cols}{Columns to adorn. This takes a tidyselect specification and is
+the recommended interface for selecting columns.}
 }
 \value{
 a data.frame with formatted percentages
@@ -39,7 +44,7 @@ Numeric columns get multiplied by 100 and formatted as
 percentages according to user specifications. This function defaults to
 excluding the first column of the input data.frame, assuming that it contains
 a descriptive variable, but this can be overridden by specifying the columns
-to adorn in the \code{...} argument.  Non-numeric columns are always excluded.
+to adorn in the \code{cols} argument. Non-numeric columns are always excluded.
 
 The decimal separator character is the result of \code{getOption("OutDec")}, which
 is based on the user's locale. If the default behavior is undesirable,
@@ -53,9 +58,7 @@ mtcars \%>\%
   adorn_percentages("col") \%>\%
   adorn_pct_formatting()
 
-# Control the columns to be adorned with the ... variable selection argument
-# If using only the ... argument, you can use empty commas as shorthand
-# to supply the default values to the preceding arguments:
+# Select columns without positional placeholder commas:
 
 cases <- data.frame(
   region = c("East", "West"),
@@ -65,7 +68,7 @@ cases <- data.frame(
 )
 
 cases \%>\%
-  adorn_percentages("col", , recovered:died) \%>\%
-  adorn_pct_formatting(, , , recovered:died)
+  adorn_percentages(denominator = "col", cols = recovered:died) \%>\%
+  adorn_pct_formatting(cols = recovered:died)
 
 }

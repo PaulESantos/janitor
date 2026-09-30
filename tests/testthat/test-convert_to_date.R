@@ -24,6 +24,14 @@ test_that("convert_date works", {
     as.Date("2009-07-06")
   )
   expect_equal(
+    convert_to_date(40908, date_system = "mac pre-2011"),
+    as.Date("2016-01-01")
+  )
+  expect_equal(
+    convert_to_date("40908", date_system = "mac pre-2011"),
+    as.Date("2016-01-01")
+  )
+  expect_equal(
     convert_to_date(as.Date("2009-07-06")),
     as.Date("2009-07-06")
   )
@@ -83,6 +91,10 @@ test_that("convert_datetime works", {
   expect_equal(
     convert_to_datetime(as.Date("2009-07-06")),
     as.POSIXct("2009-07-06", tz = "UTC")
+  )
+  expect_equal(
+    convert_to_datetime(as.Date("2009-07-06"), tz = "America/New_York"),
+    as.POSIXct("2009-07-06", tz = "America/New_York")
   )
   expect_equal(
     convert_to_datetime(as.POSIXct("2009-07-06", tz = "UTC")),

@@ -4,7 +4,7 @@
 \alias{adorn_rounding}
 \title{Round the numeric columns in a data.frame.}
 \usage{
-adorn_rounding(dat, digits = 1, rounding = "half to even", ...)
+adorn_rounding(dat, digits = 1, rounding = "half to even", ..., cols = NULL)
 }
 \arguments{
 \item{dat}{A \code{tabyl} or other \code{data.frame} with similar layout.
@@ -16,10 +16,14 @@ If given a list of data.frames, this function will apply itself to each
 \item{rounding}{Method to use for rounding - either "half to even"
 (the base R default method), or "half up", where 14.5 rounds up to 15.}
 
-\item{...}{Columns to adorn.  This takes a tidyselect specification.
+\item{...}{Legacy columns-to-adorn tidyselect specification. Supply either
+\code{cols} or \code{...}, not both.
 By default, all numeric columns (besides the initial column, if numeric)
 are adorned, but this allows you to manually specify which columns should
 be adorned, for use on a data.frame that does not result from a call to \code{tabyl}.}
+
+\item{cols}{Columns to adorn. This takes a tidyselect specification and is
+the recommended interface for selecting columns.}
 }
 \value{
 The \code{data.frame} with rounded numeric columns.
@@ -28,7 +32,7 @@ The \code{data.frame} with rounded numeric columns.
 Can run on any \code{data.frame} with at least one numeric column.
 This function defaults to excluding the first column of the input data.frame,
 assuming that it contains a descriptive variable, but this can be overridden by
-specifying the columns to round in the \code{...} argument.
+specifying the columns to round in the \code{cols} argument.
 
 If you're formatting percentages, e.g., the result of \code{\link[=adorn_percentages]{adorn_percentages()}},
 use \code{\link[=adorn_pct_formatting]{adorn_pct_formatting()}} instead.  This is a more flexible variant for ad-hoc usage.
@@ -51,9 +55,7 @@ mtcars \%>\%
   mutate(dummy = "a") \%>\%
   adorn_rounding()
 
-# Control the columns to be adorned with the ... variable selection argument
-# If using only the ... argument, you can use empty commas as shorthand
-# to supply the default values to the preceding arguments:
+# Select columns without positional placeholder commas:
 cases <- data.frame(
   region = c("East", "West"),
   year = 2015,
@@ -62,6 +64,6 @@ cases <- data.frame(
 )
 
 cases \%>\%
-  adorn_percentages(, , ends_with("ed")) \%>\%
-  adorn_rounding(, , all_of(c("recovered", "died")))
+  adorn_percentages(cols = ends_with("ed")) \%>\%
+  adorn_rounding(cols = all_of(c("recovered", "died")))
 }

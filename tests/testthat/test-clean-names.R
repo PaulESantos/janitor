@@ -203,6 +203,21 @@ test_that("labels are created in default method (feature request #563)", {
   expect_equal(names(dat_df_clean_labels), c("a_a", "b_b"))
 })
 
+test_that("sf labels follow the columns that were renamed", {
+  skip_if_not_installed("sf")
+  dat_sf <- sf::st_sf(
+    geometry = sf::st_sfc(sf::st_point(c(0, 0))),
+    `first name` = 1,
+    `second name` = 2
+  )
+
+  cleaned <- clean_names(dat_sf, set_labels = TRUE)
+
+  expect_equal(attr(cleaned$first_name, "label"), "first name")
+  expect_equal(attr(cleaned$second_name, "label"), "second name")
+  expect_null(attr(cleaned$geometry, "label"))
+})
+
 test_that("allow for duplicates (fix #495)", {
   expect_equal(
     make_clean_names(c("a", "a", "a_2"), allow_dupes = TRUE),

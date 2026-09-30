@@ -71,8 +71,11 @@ excel_numeric_to_date <- function(date_num, date_system = "modern", include_time
   if (any(mask_day_rollover)) {
     warning(sum(mask_day_rollover), " date_num values are within 0.001 sec of a later date and were rounded up to the next day.")
   }
-  mask_excel_leap_day_bug <- !is.na(date_num_days) & floor(date_num_days) == 60
-  mask_before_excel_leap_day_bug <- !is.na(date_num_days) & floor(date_num_days) < 60
+  # The fictitious 29 February 1900 exists only in Excel's modern date system.
+  mask_excel_leap_day_bug <-
+    date_system == "modern" & !is.na(date_num_days) & floor(date_num_days) == 60
+  mask_before_excel_leap_day_bug <-
+    date_system == "modern" & !is.na(date_num_days) & floor(date_num_days) < 60
   date_num_days[mask_excel_leap_day_bug] <- NA_real_
   if (any(!is.na(date_num_days) & (date_num_days < 1))) {
     warning("Only `date_num` >= 1 are valid in Excel, creating an earlier date than Excel supports.")

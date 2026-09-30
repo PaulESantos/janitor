@@ -14,7 +14,10 @@
 #'   with `format_func`, you can supply them here.
 #' @param format_func A formatting function to run on the Ns. Consider defining
 #'   with [base::format()].
-#' @param ... Columns to adorn. This takes a tidyselect specification.  By default,
+#' @param cols Columns to adorn. This takes a tidyselect specification and is
+#'   the recommended interface for selecting columns.
+#' @param ... Legacy columns-to-adorn tidyselect specification. Supply either
+#'   `cols` or `...`, not both. By default,
 #'   all columns are adorned except for the first column and columns not of class
 #'   `numeric`, but this allows you to manually specify which columns should be adorned,
 #'   for use on a data.frame that does not result from a call to `tabyl`.
@@ -43,9 +46,7 @@
 #'   adorn_pct_formatting(digits = 1) %>%
 #'   adorn_ns(format_func = function(x) format(x, big.mark = ".", decimal.mark = ","))
 
-#' # Control the columns to be adorned with the ... variable selection argument
-#' # If using only the ... argument, you can use empty commas as shorthand
-#' # to supply the default values to the preceding arguments:
+#' # Select columns without positional placeholder commas:
 #'
 #' cases <- data.frame(
 #'   region = c("East", "West"),
@@ -55,16 +56,30 @@
 #' )
 #'
 #' cases %>%
-#'  adorn_percentages("col",,recovered:died) %>%
-#'  adorn_pct_formatting(,,,,,recovered:died) %>%
-#'  adorn_ns(,,,recovered:died)
+#'  adorn_percentages(denominator = "col", cols = recovered:died) %>%
+#'  adorn_pct_formatting(cols = recovered:died) %>%
+#'  adorn_ns(cols = recovered:died)
 #'
 adorn_ns <- function(dat, position = "rear", ns = attr(dat, "core"), format_func = function(x) {
                        format(x, big.mark = ",")
-                     }, ...) {
+                     }, ..., cols = NULL) {
+  cols_enquo <- rlang::enquo(cols)
+  has_cols <- !rlang::quo_is_null(cols_enquo)
+  has_dots <- rlang::dots_n(...) > 0
+  if (has_cols && has_dots) {
+    stop("Specify columns to adorn using either 'cols' or '...', not both.")
+  }
   # if input is a list, call purrr::map to recursively apply this function to each data.frame
   if (is.list(dat) && !is.data.frame(dat)) {
-    purrr::map(dat, adorn_ns, position) # okay not to pass ns and allow for static Ns, b/c one size fits all for each list entry doesn't make sense for Ns.
+    # A single `ns` data.frame cannot sensibly apply to every table in a list,
+    # so retain the per-table core values but forward formatting and selection.
+    if (has_cols) {
+      purrr::map(dat, function(x) {
+        adorn_ns(x, position = position, format_func = format_func, cols = !!cols_enquo)
+      })
+    } else {
+      purrr::map(dat, adorn_ns, position = position, format_func = format_func, ...)
+    }
   } else {
     ns_provided <- !missing(ns)
 
@@ -118,15 +133,19 @@ adorn_ns <- function(dat, position = "rear", ns = attr(dat, "core"), format_func
     }
     attributes(result) <- attrs
 
-    if (custom_ns_supplied & rlang::dots_n(...) == 0) {
+    if (custom_ns_supplied & !has_cols & !has_dots) {
       dont_adorn <- 1L
-    } else if (rlang::dots_n(...) == 0) {
+    } else if (!has_cols & !has_dots) {
       cols_to_adorn <- numeric_cols
       dont_adorn <- setdiff(1:ncol(dat), cols_to_adorn)
       dont_adorn <- unique(c(1, dont_adorn)) # always don't-append first column
     } else {
-      expr <- rlang::expr(c(...))
-      cols_to_adorn <- tidyselect::eval_select(expr, data = dat)
+      if (has_cols) {
+        cols_to_adorn <- tidyselect::eval_select(cols_enquo, data = dat)
+      } else {
+        expr <- rlang::expr(c(...))
+        cols_to_adorn <- tidyselect::eval_select(expr, data = dat)
+      }
       dont_adorn <- setdiff(1:ncol(dat), cols_to_adorn)
     }
 

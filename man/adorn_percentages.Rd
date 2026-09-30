@@ -4,7 +4,7 @@
 \alias{adorn_percentages}
 \title{Convert a data.frame of counts to percentages.}
 \usage{
-adorn_percentages(dat, denominator = "row", na.rm = TRUE, ...)
+adorn_percentages(dat, denominator = "row", na.rm = TRUE, ..., cols = NULL)
 }
 \arguments{
 \item{dat}{A \code{tabyl} or other data.frame with a tabyl-like layout.
@@ -16,10 +16,14 @@ One of "row", "col", or "all".}
 
 \item{na.rm}{should missing values (including \code{NaN}) be omitted from the calculations?}
 
-\item{...}{columns to adorn. This takes a <\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}>
+\item{...}{Legacy columns-to-adorn tidyselect specification. Supply either
+\code{cols} or \code{...}, not both.
 specification. By default, all numeric columns (besides the initial column, if numeric)
 are adorned, but this allows you to manually specify which columns should
 be adorned, for use on a \code{data.frame} that does not result from a call to \code{\link[=tabyl]{tabyl()}}.}
+
+\item{cols}{Columns to adorn. This takes a <\code{\link[dplyr:dplyr_tidy_select]{tidy-select}}>
+specification and is the recommended interface for selecting columns.}
 }
 \value{
 A \code{data.frame} of percentages, expressed as numeric values between 0 and 1.
@@ -27,7 +31,7 @@ A \code{data.frame} of percentages, expressed as numeric values between 0 and 1.
 \description{
 This function defaults to excluding the first column of the input data.frame,
 assuming that it contains a descriptive variable, but this can be overridden
-by specifying the columns to adorn in the \code{...} argument.
+by specifying the columns to adorn in the \code{cols} argument.
 }
 \examples{
 
@@ -41,9 +45,7 @@ mtcars \%>\%
   adorn_totals("row") \%>\%
   adorn_percentages()
 
-# Control the columns to be adorned with the ... variable selection argument
-# If using only the ... argument, you can use empty commas as shorthand
-# to supply the default values to the preceding arguments:
+# Select columns without positional placeholder commas:
 
 cases <- data.frame(
   region = c("East", "West"),
@@ -53,5 +55,5 @@ cases <- data.frame(
 )
 
 cases \%>\%
-  adorn_percentages(, , recovered:died)
+  adorn_percentages(denominator = "col", cols = recovered:died)
 }

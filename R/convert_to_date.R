@@ -81,7 +81,7 @@ convert_to_datetime_helper.numeric <- function(x, ...,
   out_class <- match.arg(out_class)
   excel_numeric_to_date(
     date_num = x,
-    date_system = "modern",
+    date_system = date_system,
     round_seconds = round_seconds,
     tz = tz,
     include_time = out_class %in% "POSIXct"
@@ -108,9 +108,9 @@ convert_to_datetime_helper.POSIXt <- function(x, ..., out_class = c("POSIXct", "
 convert_to_datetime_helper.Date <- function(x, ..., tz = "UTC", out_class = c("POSIXct", "Date")) {
   out_class <- match.arg(out_class)
   if (out_class %in% "POSIXct") {
-    ret <- as.POSIXct(x, ...)
-    # as.POSIXct.Date ignores the time zone, so manually apply it.
-    attr(ret, "tzone") <- tz
+    # as.POSIXct.Date() ignores `tz`; parse the date string in the requested
+    # zone so the result represents local midnight rather than a UTC instant.
+    ret <- as.POSIXct(as.character(x), tz = tz, ...)
   } else {
     ret <- x
   }
@@ -130,7 +130,11 @@ convert_to_datetime_helper.character <- function(x, ..., tz = "UTC", character_f
     ret <- as.Date(x = rep(NA, length(x)))
   }
   if (any(mask_excel_numeric)) {
-    ret[mask_excel_numeric] <- convert_to_datetime_helper(as.numeric(x[mask_excel_numeric]), ..., tz = tz)
+    ret[mask_excel_numeric] <- convert_to_datetime_helper(
+      as.numeric(x[mask_excel_numeric]), ...,
+      tz = tz,
+      out_class = out_class
+    )
   }
   if (any(mask_character)) {
     characters_converted <-
