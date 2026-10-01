@@ -58,12 +58,41 @@ install.packages("janitor")
 
 * the latest development version from GitHub with
 
-```R
+```r
 # install.packages("remotes")
 remotes::install_github("sfirke/janitor")
 # or from r-universe
 install.packages("janitor", repos = c("https://sfirke.r-universe.dev", "https://cloud.r-project.org"))
 ```
+
+* the latest development personal version from GitHub with
+
+```R
+# install.packages("pak")
+pak::pak("PaulESantos/janitor")
+```
+
+## What's new in this development version
+
+This fork makes column selection in the tabulation-formatting workflow more explicit.
+`adorn_totals()`, `adorn_percentages()`, `adorn_pct_formatting()`,
+`adorn_rounding()`, and `adorn_ns()` now accept a named `cols =` argument with
+tidyselect expressions.  This avoids placeholder commas when the function also
+has earlier optional arguments.
+
+| Earlier interface | Current interface | Compatibility |
+| --- | --- | --- |
+| `adorn_percentages("col", , recovered:died)` | `adorn_percentages(denominator = "col", cols = recovered:died)` | The `...` selection interface is still supported. |
+| `adorn_pct_formatting(, , , recovered:died)` | `adorn_pct_formatting(cols = recovered:died)` | The existing formatting behavior is unchanged. |
+| `adorn_totals(, , , , recovered:died)` | `adorn_totals(cols = recovered:died)` | Existing `...` calls continue to work. |
+
+The default behavior is unchanged: when no columns are selected explicitly,
+these functions operate on their usual numeric columns (normally excluding the
+first descriptive column).  Use only one selection interface per call—either
+`cols =` or the legacy `...` arguments.  Supplying both is rejected to avoid an
+ambiguous selection.  Calls that previously passed target columns through
+`where` in `adorn_totals()` still work, but issue a warning and should be
+migrated to `cols =`.
 
 ## Using janitor
 
